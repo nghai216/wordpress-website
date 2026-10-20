@@ -1,0 +1,131 @@
+networks:
+  app-net:
+    driver: bridge
+
+volumes:
+  db_data:
+  wordpress_data:
+  prometheus_data:
+  grafana_data:
+  loki_data:
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: wp_mysql
+    restart: always
+    environment:
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wp_user
+      MYSQL_PASSWORD: wp_password
+      MYSQL_ROOT_PASSWORD: root_password
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - app-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_password"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: wp_phpmyadmin
+    restart: always
+    environment:
+      PMA_HOST: db
+      MYSQL_ROOT_PASSWORD: root_password
+    ports:
+      - "8081:80"
+    networks:
+      - app-net
+    depends_on:
+      - db
+
+  wordpress:
+    image: wordpress:latest
+    container_name: wp_website
+    restart: always
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_DB_USER: wp_user
+      WORDPRESS_DB_PASSWORD: wp_password
+    volumes:
+      - wordpress_data:/var/www/html
+    networks:
+      - app-net
+    depends_on:
+      db:
+        condition: service_healthy
+
+  nginx:
+    build: ./nginx
+    container_name: wp_nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - wordpress_data:/var/www/html:ro
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+    networks:
+      - app-net
+    depends_on:
+      - wordpress
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: wp_prometheus
+    restart: always
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    ports:
+      - "9091:9090"
+    networks:
+      - app-net
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: wp_grafana
+    restart: always
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - app-net
+    depends_on:
+      - prometheus
+
+  loki:
+    image: grafana/loki:2.9.2
+    container_name: wp_loki
+    restart: always
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki/loki-config.yaml:/etc/loki/loki-config.yaml
+      - loki_data:/loki
+    command: -config.file=/etc/loki/loki-config.yaml
+    networks:
+      - app-net
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: wp_promtail
+    restart: always
+    volumes:
+      - ./loki/promtail-config.yaml:/etc/promtail/promtail-config.yaml
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/log:/var/log:ro
+    command: -config.file=/etc/promtail/promtail-config.yaml
+    networks:
+      - app-net
+    depends_on:
+      - loki
