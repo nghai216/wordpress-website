@@ -80,7 +80,7 @@ Khi cơ sở dữ liệu đã sẵn sàng, tiến hành khởi chạy toàn bộ
 ```Bash
 docker compose up -d --build
 ```
-### Bước 5: Thông tin Truy cập Dịch vụ
+## 5: Thông tin Truy cập Dịch vụ
 Trang web WordPress (HTTPS): https://localhost
 
 phpMyAdmin (Quản lý DB): http://localhost:8081 (User: root / Pass: mật khẩu cấu hình trong compose)
@@ -89,7 +89,7 @@ Grafana (Dashboard giám sát): http://localhost:3001 (User: admin / Pass: admin
 
 Prometheus (Metrics): http://localhost:9091
 
-### Bước 6: Hệ thống Giám sát & Log tập trung
+## 6: Hệ thống Giám sát & Log tập trung
 Prometheus & Grafana: Thu thập số liệu tài nguyên (CPU, RAM, Network) của các container và hiển thị biểu đồ trực quan.
 
 Loki + Promtail: Promtail tự động đọc luồng log từ các container Docker đẩy về Loki. Bạn có thể sử dụng ngôn ngữ LogQL trên Grafana Explore để truy vấn:
@@ -98,7 +98,7 @@ Lọc log theo container Nginx: {container="wp_nginx"}
 
 Tìm kiếm lỗi toàn hệ thống: {container=~"wp_.*"} |= "error"
 
-### Bước 7: Các Biện pháp Hardening & Bảo mật Hệ thống
+## 7: Các Biện pháp Hardening & Bảo mật Hệ thống
 Network Isolation: Phân chia mạng riêng app-net, chặn tuyệt đối các kết nối trái phép vào container database từ bên ngoài mạng chung.
 
 Nginx Security Headers: Tích hợp đầy đủ các tiêu chuẩn chống tấn công phổ biến trên web server:
