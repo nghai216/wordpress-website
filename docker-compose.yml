@@ -129,3 +129,40 @@ services:
       - app-net
     depends_on:
       - loki
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.52.1
+    container_name: cadvisor
+    restart: always
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks:
+      - app-net
+
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:1.4.2
+    container_name: nginx-exporter
+    restart: always
+    command:
+      - -nginx.scrape-uri=http://wp_nginx:8082/stub_status
+    networks:
+      - app-net
+    depends_on:
+      - nginx
+
+  mysql-exporter:
+    image: prom/mysqld-exporter:v0.17.2
+    container_name: mysql-exporter
+    restart: always
+    environment:
+      DATA_SOURCE_NAME: "root:root_password@(wp_mysql:3306)/"
+    command:
+      - "--mysqld.address=wp_mysql:3306"
+      - "--mysqld.username=root:root_password"
+    networks:
+      - app-net
+    depends_on:
+      db:
+        condition: service_healthy
